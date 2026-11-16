@@ -1,0 +1,2064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MilanDB — My Movie Archive</title>
+<style>
+:root {
+  --bg: #090b10;
+  --panel: rgba(20, 24, 34, 0.88);
+  --panel-2: #111621;
+  --text: #f6f7fb;
+  --muted: #9aa3b2;
+  --line: rgba(255,255,255,.09);
+  --gold: #f4c95d;
+  --gold-soft: rgba(244,201,93,.16);
+  --red: #ff5b6e;
+  --green: #62d88d;
+  --blue: #6ea8ff;
+  --shadow: 0 24px 80px rgba(0,0,0,.42);
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 15% -10%, rgba(111,84,255,.24), transparent 31%),
+    radial-gradient(circle at 88% 0%, rgba(255,75,92,.18), transparent 28%),
+    linear-gradient(180deg, #0a0c12 0%, #080a0f 100%);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 34px 34px;
+  mask-image: linear-gradient(to bottom, rgba(0,0,0,.5), transparent 70%);
+}
+
+.shell {
+  width: min(1450px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 28px 0 56px;
+}
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, rgba(21,25,36,.97), rgba(12,15,22,.9));
+  border-radius: 28px;
+  padding: 34px;
+  box-shadow: var(--shadow);
+}
+
+.hero::after {
+  content: "MDB";
+  position: absolute;
+  right: 22px;
+  top: -36px;
+  font-size: clamp(120px, 20vw, 300px);
+  font-weight: 950;
+  letter-spacing: -0.09em;
+  color: rgba(255,255,255,.026);
+  transform: rotate(-4deg);
+  user-select: none;
+}
+
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gold);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.kicker::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 18px rgba(244,201,93,.75);
+}
+
+h1 {
+  margin: 10px 0 6px;
+  font-size: clamp(42px, 7vw, 82px);
+  line-height: .96;
+  letter-spacing: -0.055em;
+}
+
+.hero p {
+  margin: 13px 0 0;
+  max-width: 720px;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.65;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.stat {
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.035);
+  border-radius: 18px;
+  padding: 16px;
+}
+
+.stat strong {
+  display: block;
+  font-size: 25px;
+  letter-spacing: -.03em;
+}
+
+.stat span {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.toolbar {
+  position: sticky;
+  top: 10px;
+  z-index: 20;
+  margin: 18px 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  background: rgba(11,14,20,.78);
+  backdrop-filter: blur(18px);
+  border-radius: 20px;
+  box-shadow: 0 15px 40px rgba(0,0,0,.26);
+}
+
+.search {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #0c1018;
+  color: var(--text);
+  outline: none;
+  border-radius: 14px;
+  padding: 13px 16px;
+  font-size: 14px;
+}
+
+.search:focus { border-color: rgba(110,168,255,.55); box-shadow: 0 0 0 3px rgba(110,168,255,.11); }
+
+.tabs {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  border: 1px solid var(--line);
+  background: #111620;
+  color: #cdd4df;
+  border-radius: 12px;
+  padding: 10px 13px;
+  cursor: pointer;
+  font-weight: 750;
+  font-size: 12px;
+  transition: .18s ease;
+}
+
+.tab:hover { transform: translateY(-1px); border-color: rgba(255,255,255,.18); }
+.tab.active { background: #f5f7fb; color: #111318; border-color: white; }
+
+.section {
+  display: none;
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.section.active { display: block; }
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 12px;
+  padding: 24px 24px 18px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255,255,255,.035), transparent);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-title .icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--line);
+  font-size: 20px;
+}
+
+.section h2 {
+  margin: 0;
+  font-size: 25px;
+  letter-spacing: -.025em;
+}
+
+.section small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.hof .section-head {
+  background: linear-gradient(135deg, rgba(244,201,93,.18), rgba(255,255,255,.02));
+}
+
+.hof .section-title .icon {
+  background: var(--gold-soft);
+  border-color: rgba(244,201,93,.28);
+}
+
+.table-wrap { overflow-x: auto; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 760px;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 12px 16px;
+  background: #0d1119;
+  color: #8f98a8;
+  font-size: 11px;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  border-bottom: 1px solid var(--line);
+}
+
+tbody tr {
+  transition: background .15s ease, transform .15s ease;
+  border-bottom: 1px solid var(--line);
+}
+
+tbody tr:hover { background: rgba(255,255,255,.035); }
+tbody tr:last-child { border-bottom: 0; }
+
+td {
+  padding: 12px 16px;
+  vertical-align: middle;
+}
+
+.rank {
+  width: 62px;
+  color: #6f7888;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.poster-cell { width: 88px; }
+
+.poster {
+  width: 58px;
+  height: 80px;
+  object-fit: cover;
+  display: block;
+  border-radius: 10px;
+  background: linear-gradient(135deg,#202838,#11151d);
+  box-shadow: 0 10px 25px rgba(0,0,0,.35);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.poster-fallback {
+  width: 58px;
+  height: 80px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 6px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .04em;
+  color: #cfd5de;
+  background:
+    radial-gradient(circle at 30% 20%, rgba(110,168,255,.22), transparent 34%),
+    linear-gradient(135deg,#1b2230,#0d1118);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.title {
+  min-width: 270px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -.012em;
+}
+
+.sub {
+  margin-top: 4px;
+  color: #6f7888;
+  font-size: 11px;
+}
+
+.rating {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 68px;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 900;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.04);
+}
+
+.imdb { color: #f6d365; background: rgba(246,211,101,.08); border-color: rgba(246,211,101,.18); }
+.mine-10 { color: #ffd66b; background: rgba(244,201,93,.12); border-color: rgba(244,201,93,.28); }
+.mine-high { color: #78e6a1; background: rgba(98,216,141,.10); border-color: rgba(98,216,141,.22); }
+.mine-mid { color: #8eb9ff; background: rgba(110,168,255,.10); border-color: rgba(110,168,255,.22); }
+.mine-low { color: #ff8592; background: rgba(255,91,110,.10); border-color: rgba(255,91,110,.22); }
+
+.empty {
+  padding: 44px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.footer {
+  color: #707887;
+  text-align: center;
+  font-size: 12px;
+  padding: 24px 0 0;
+}
+
+code {
+  color: #dbe7ff;
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 5px;
+}
+
+@media (max-width: 900px) {
+  .stats { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .toolbar { grid-template-columns: 1fr; position: static; }
+  .hero { padding: 24px; }
+  .shell { width: min(100% - 18px, 1450px); padding-top: 10px; }
+}
+
+@media (max-width: 520px) {
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stat strong { font-size: 20px; }
+  .section-head { align-items: flex-start; }
+  .tab { flex: 1 1 calc(50% - 7px); }
+}
+
+
+/* ==================== BIG POSTER GALLERY ==================== */
+.view-controls {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 3px 2px 1px;
+}
+.view-controls .control-group { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.control-caption { color: var(--muted); font-size: 12px; font-weight: 750; margin-right: 5px; }
+.view-button {
+  border: 1px solid var(--line); color: #cdd4df; background: #111620;
+  font: inherit; font-size: 12px; font-weight: 800;
+  padding: 10px 15px; border-radius: 12px; cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+.view-button:hover { border-color: rgba(255,255,255,.25); transform: translateY(-1px); }
+.view-button.active { background: #f4c95d; color: #101115; border-color: #f4c95d; }
+.view-hint { color: #aab3c1; font-size: 12px; }
+.poster-open {
+  padding: 0; background: transparent; border: none; color: inherit;
+  display: block; width: 58px; height: 80px; text-align: inherit;
+  cursor: zoom-in; border-radius: 11px;
+}
+.poster-open:focus-visible { outline: 3px solid #f4c95d; outline-offset: 4px; }
+.poster-open .poster, .poster-open .poster-fallback { width: 100%; height: 100%; }
+.poster-open .poster { object-fit: cover; }
+
+body.view-gallery { --gallery-min-width: 250px; }
+body.view-gallery.super-size { --gallery-min-width: 345px; }
+body.view-gallery .table-wrap { overflow: visible; padding: 24px; }
+body.view-gallery table, body.view-gallery tbody { width: 100%; min-width: 0; display: block; }
+body.view-gallery thead { display: none; }
+body.view-gallery tbody {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--gallery-min-width)), 1fr));
+  gap: 22px;
+  align-items: stretch;
+}
+body.view-gallery tbody tr {
+  min-width: 0; display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  align-items: stretch;
+  column-gap: 10px; row-gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 20px;
+  background: linear-gradient(145deg,rgba(255,255,255,.065),rgba(255,255,255,.015));
+  overflow: hidden;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+body.view-gallery tbody tr:hover {
+  background: linear-gradient(145deg,rgba(255,255,255,.095),rgba(255,255,255,.025));
+  border-color: rgba(244,201,93,.36);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 34px rgba(0,0,0,.25);
+}
+body.view-gallery .hof tbody tr { border-color: rgba(244,201,93,.19); }
+body.view-gallery tbody td { padding: 0; min-width: 0; }
+body.view-gallery tbody td.rank { display: none; }
+body.view-gallery tbody td.poster-cell { grid-column: 1 / -1; width: 100%; }
+body.view-gallery tbody td:nth-child(3) { grid-column: 1 / -1; align-self: start; }
+body.view-gallery tbody td.rating { display: flex; align-items: flex-end; }
+body.view-gallery tbody td.rating:last-child { justify-content: flex-end; }
+body.view-gallery .title { min-width: 0; line-height: 1.3; font-size: 17px; }
+body.view-gallery .sub { font-size: 12px; }
+body.view-gallery .poster-open {
+  width: 100%; height: auto; aspect-ratio: 2 / 3;
+  overflow: hidden; border-radius: 14px; background: #111723;
+  box-shadow: 0 15px 38px rgba(0,0,0,.4);
+}
+body.view-gallery .poster-open .poster,
+body.view-gallery .poster-open .poster-fallback {
+  width: 100%; height: 100%; aspect-ratio: 2 / 3;
+  border-radius: 14px;
+}
+body.view-gallery .poster-open .poster-fallback {
+  font-size: clamp(18px, 3vw, 32px); padding: 22px;
+  background: radial-gradient(circle at 30% 15%, rgba(244,201,93,.20), transparent 45%),
+              linear-gradient(145deg,#263148,#0e1420);
+}
+body.view-gallery .poster-open:hover .poster { filter: brightness(1.10); }
+body.view-gallery .badge { padding: 8px 12px; font-size: 13px; }
+body.view-gallery .empty { grid-column: 1 / -1; }
+body.view-gallery tbody tr:has(.empty) { grid-column: 1 / -1; display: block; }
+
+/* Click any poster to see it almost full-screen. */
+.poster-modal {
+  width: min(94vw, 820px); max-height: 94vh; padding: 0; overflow: auto;
+  border: 1px solid rgba(244,201,93,.3); border-radius: 24px;
+  background: #10141e; color: #f6f7fb; box-shadow: 0 30px 95px #000;
+}
+.poster-modal::backdrop { background: rgba(2,3,8,.88); backdrop-filter: blur(12px); }
+.poster-modal-inner { padding: 18px 20px 25px; display: grid; justify-items: center; gap: 13px; }
+.poster-modal-header { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+.poster-modal-header strong { font-size: clamp(17px, 2.5vw, 24px); }
+.poster-modal-close {
+  width: 40px; height: 40px; flex: 0 0 40px; cursor: pointer;
+  background: rgba(255,255,255,.1); border: 1px solid var(--line);
+  border-radius: 50%; color: white; font-size: 25px;
+}
+.poster-modal-image { display: block; width: auto; max-width: 100%; max-height: min(71vh, 860px); object-fit: contain; border-radius: 11px; }
+.poster-modal-image[hidden] { display: none; }
+.poster-modal-fallback { display: none; min-height: 250px; width: min(85vw, 440px); place-items: center;
+  border-radius: 15px; background: #1e293d; color: #b3becd; font-weight: 750; text-align: center; padding: 20px; }
+.poster-modal-fallback.visible { display: grid; }
+.poster-modal-rating { color: #e9c66d; font-weight: 800; text-align: center; }
+@media (max-width: 650px) {
+  body.view-gallery { --gallery-min-width: 155px; }
+  body.view-gallery.super-size { --gallery-min-width: 235px; }
+  body.view-gallery .table-wrap { padding: 12px; }
+  body.view-gallery tbody { gap: 10px; }
+  body.view-gallery tbody tr { padding: 9px; border-radius: 14px; gap: 8px; }
+  body.view-gallery .title { font-size: 14px; }
+  body.view-gallery .badge { font-size: 10px; min-width: 0; padding: 6px 8px; }
+  body.view-gallery .poster-open { border-radius: 10px; }
+  .view-hint { display: none; }
+}
+
+</style>
+</head>
+<body class="view-gallery super-size">
+
+<div class="shell">
+  <header class="hero">
+    <div class="kicker">Personal watch archive</div>
+    <h1>MilanDB</h1>
+    <p>A cinematic archive of the movies and series that made the cut — from all-time hall-of-fame picks to everything watched and rated.</p>
+
+    <div class="stats">
+      <div class="stat"><strong id="statTotal">0</strong><span>Total titles</span></div>
+      <div class="stat"><strong id="statHof">0</strong><span>Hall of Fame</span></div>
+      <div class="stat"><strong id="statMovies">0</strong><span>Movies</span></div>
+      <div class="stat"><strong id="statSeries">0</strong><span>Series</span></div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <input id="search" class="search" type="search" placeholder="Search any title..." autocomplete="off">
+    <div class="tabs">
+      <button class="tab active" data-target="hofMovies">🏆 HOF Movies</button>
+      <button class="tab" data-target="hofSeries">👑 HOF Series</button>
+      <button class="tab" data-target="watchedMovies">🎬 Watched Movies</button>
+      <button class="tab" data-target="watchedSeries">📺 Watched Series</button>
+    </div>
+    <div class="view-controls" aria-label="Poster display controls">
+      <div class="control-group">
+        <span class="control-caption">Layout</span>
+        <button type="button" class="view-button active" id="galleryMode" aria-pressed="true">🎞️ Poster gallery</button>
+        <button type="button" class="view-button" id="listMode" aria-pressed="false">☰ List</button>
+        <button type="button" class="view-button active" id="sizeMode" aria-pressed="true">⛶ Super-size ON</button>
+      </div>
+      <span class="view-hint">Click a poster for a full-screen close-up ✨</span>
+    </div>
+  </div>
+
+  <main>
+    <section id="hofMovies" class="section hof active">
+      <div class="section-head">
+        <div class="section-title">
+          <div class="icon">🏆</div>
+          <div><h2>Hall of Fame — Movies</h2><small id="count-hofMovies"></small></div>
+        </div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Poster</th><th>Title</th><th>IMDb</th><th>My Rating</th></tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <section id="hofSeries" class="section hof">
+      <div class="section-head">
+        <div class="section-title">
+          <div class="icon">👑</div>
+          <div><h2>Hall of Fame — Series</h2><small id="count-hofSeries"></small></div>
+        </div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Poster</th><th>Title</th><th>IMDb</th><th>My Rating</th></tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <section id="watchedMovies" class="section">
+      <div class="section-head">
+        <div class="section-title">
+          <div class="icon">🎬</div>
+          <div><h2>Watched — Movies</h2><small id="count-watchedMovies"></small></div>
+        </div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Poster</th><th>Title</th><th>IMDb</th><th>My Rating</th></tr></thead><tbody></tbody></table></div>
+    </section>
+
+    <section id="watchedSeries" class="section">
+      <div class="section-head">
+        <div class="section-title">
+          <div class="icon">📺</div>
+          <div><h2>Watched — Series</h2><small id="count-watchedSeries"></small></div>
+        </div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Poster</th><th>Title</th><th>IMDb</th><th>My Rating</th></tr></thead><tbody></tbody></table></div>
+    </section>
+  </main>
+
+  <div class="footer">Built as a single HTML file • Posters load online from Wikipedia when available. An internet connection is required.</div>
+</div>
+
+<dialog id="posterModal" class="poster-modal" aria-label="Enlarged movie poster">
+  <div class="poster-modal-inner">
+    <div class="poster-modal-header">
+      <strong id="posterModalTitle"></strong>
+      <button class="poster-modal-close" id="posterModalClose" type="button" aria-label="Close enlarged poster">×</button>
+    </div>
+    <img class="poster-modal-image" id="posterModalImage" alt="Enlarged poster" hidden>
+    <div id="posterModalFallback" class="poster-modal-fallback">Looking up the poster…</div>
+    <div id="posterModalRating" class="poster-modal-rating"></div>
+  </div>
+</dialog>
+
+<script>
+// ============================================================
+/* ADD / EDIT TITLES HERE.
+   Each record looks like:
+   {"title": "Movie Name", "imdb": 8.5, "mine": 9, "image": "", "kind": "movie"}
+
+   Put movie records in hofMovies or watchedMovies.
+   Put series records in hofSeries or watchedSeries.
+   Leave image as "" to fetch an image automatically from Wikipedia.
+   Or paste a direct image URL inside image: "https://..."
+*/
+// ============================================================
+const database = {
+  "hofMovies": [
+    {
+      "title": "The Dark Knight",
+      "imdb": 9.1,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Inception",
+      "imdb": 8.8,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Nadodikkattu",
+      "imdb": 8.8,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Interstellar",
+      "imdb": 8.7,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "The Matrix",
+      "imdb": 8.7,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Manichitrathazhu",
+      "imdb": 8.7,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "The Prestige",
+      "imdb": 8.5,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Kumbalangi Nights",
+      "imdb": 8.5,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Avengers: Endgame",
+      "imdb": 8.4,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Avengers: Infinity War",
+      "imdb": 8.4,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "The Odyssey",
+      "imdb": 8.4,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Anniyan",
+      "imdb": 8.4,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "The Dark Knight Rises",
+      "imdb": 8.4,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Joker",
+      "imdb": 8.3,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Bangalore Days",
+      "imdb": 8.3,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Taare Zameen Par",
+      "imdb": 8.3,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Premam",
+      "imdb": 8.3,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Shutter Island",
+      "imdb": 8.2,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "The Sixth Sense",
+      "imdb": 8.2,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Batman Begins",
+      "imdb": 8.2,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "K.G.F: Chapter 2",
+      "imdb": 8.2,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "K.G.F: Chapter 1",
+      "imdb": 8.1,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Catch Me If You Can",
+      "imdb": 8.1,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "PK",
+      "imdb": 8.1,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Charlie",
+      "imdb": 8.1,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Dilwale Dulhania Le Jayenge",
+      "imdb": 8.0,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Vaazha 2",
+      "imdb": 8.0,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Kal Ho Naa Ho",
+      "imdb": 7.9,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Nanban",
+      "imdb": 7.8,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Ohm Shanthi Oshaana ",
+      "imdb": 7.7,
+      "mine": 10,
+      "image": "",
+      "kind": "movie"
+    }
+  ],
+  "hofSeries": [
+    {
+      "title": "Friends",
+      "imdb": 8.8,
+      "mine": 10,
+      "image": "",
+      "kind": "series"
+    },
+    {
+      "title": "Loki",
+      "imdb": 8.2,
+      "mine": 10,
+      "image": "",
+      "kind": "series"
+    }
+  ],
+  "watchedMovies": [
+    {
+      "title": "Fight Club",
+      "imdb": 8.8,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },    
+    {
+      "title": "12th Fail",
+      "imdb": 8.7,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Nayakan",
+      "imdb": 8.6,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Godfather — Malayalam",
+      "imdb": 8.6,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Spider-Man: Across the Spider-Verse",
+      "imdb": 8.5,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Parasite",
+      "imdb": 8.5,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Back to the Future",
+      "imdb": 8.5,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Whiplash",
+      "imdb": 8.5,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "The Departed",
+      "imdb": 8.5,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Spider-Man: Into the Spider-Verse",
+      "imdb": 8.4,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Kaithi",
+      "imdb": 8.4,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Bethelem Kudumba Unit",
+      "imdb": 8.4,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Drishyam — Malayalam",
+      "imdb": 8.4,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Vikram",
+      "imdb": 8.3,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "2018",
+      "imdb": 8.3,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Dangal",
+      "imdb": 8.3,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Dhurandhar: The Revenge",
+      "imdb": 8.2,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Dhurandhar",
+      "imdb": 8.2,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Ramayana: Part 1",
+      "imdb": 8.2,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "The Truman Show",
+      "imdb": 8.2,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Ustad Hotel",
+      "imdb": 8.2,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Spider-Man: No Way Home",
+      "imdb": 8.1,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Ford v Ferrari",
+      "imdb": 8.1,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "The Avengers",
+      "imdb": 8.0,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Guardians of the Galaxy",
+      "imdb": 8.0,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Ayyappanum Koshiyum",
+      "imdb": 8.0,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Kishkindha Kaandam",
+      "imdb": 8.0,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Iron Man",
+      "imdb": 7.9,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Guardians of the Galaxy Vol. 3",
+      "imdb": 7.9,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Thor: Ragnarok",
+      "imdb": 7.9,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Anjaam Pathiraa",
+      "imdb": 7.9,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Rekhachithram",
+      "imdb": 7.8,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Captain America: Civil War",
+      "imdb": 7.8,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Bramayugam",
+      "imdb": 7.7,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Captain America: The Winter Soldier",
+      "imdb": 7.7,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Sarvam Maya",
+      "imdb": 7.7,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Pushpa: The Rise - Part 1",
+      "imdb": 7.6,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Lokah Chapter One: Chandra",
+      "imdb": 7.6,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Thenkasipattanam",
+      "imdb": 7.6,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Ee Parakkum Thalika",
+      "imdb": 7.6,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Kannur Squad",
+      "imdb": 7.6,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Bheeshma Parvam",
+      "imdb": 7.5,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Thudarum",
+      "imdb": 7.5,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Doctor Strange",
+      "imdb": 7.5,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Lucifer",
+      "imdb": 7.5,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Deadpool & Wolverine",
+      "imdb": 7.5,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Black Panther",
+      "imdb": 7.3,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "KalamKaval",
+      "imdb": 7.2,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Leo",
+      "imdb": 7.2,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Mollywood Times",
+      "imdb": 7.2,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Thunderbolts*",
+      "imdb": 7.1,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Kalki 2898 AD",
+      "imdb": 7.0,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Captain America: The First Avenger",
+      "imdb": 6.9,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Rorschach",
+      "imdb": 6.9,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Kayamkulam Kochunni",
+      "imdb": 6.8,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Doctor Strange in the Multiverse of Madness",
+      "imdb": 6.8,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Marco",
+      "imdb": 6.5,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Puzhu",
+      "imdb": 6.2,
+      "mine": 9,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Memento",
+      "imdb": 8.4,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Maharaja",
+      "imdb": 8.3,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Manjummel Boys",
+      "imdb": 8.2,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Baahubali 2: The Conclusion",
+      "imdb": 8.2,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "C.I.D. Moosa",
+      "imdb": 8.1,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Kantara",
+      "imdb": 8.1,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Rang De Basanti",
+      "imdb": 8.1,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Scene",
+      "imdb": 8.0,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Baahubali: The Beginning",
+      "imdb": 8.0,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Summer in Bethlehem",
+      "imdb": 7.8,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Premalu",
+      "imdb": 7.8,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Thanneermathan Dinangal",
+      "imdb": 7.8,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Aavesham",
+      "imdb": 7.8,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Baazigar",
+      "imdb": 7.6,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Guardians of the Galaxy: Vol. 2",
+      "imdb": 7.6,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Avengers: Age of Ultron",
+      "imdb": 7.3,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Spider-Man: Far from Home",
+      "imdb": 7.3,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Shang-Chi and the Legend of the Ten Rings",
+      "imdb": 7.3,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Enthiran",
+      "imdb": 7.2,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Ant-Man",
+      "imdb": 7.2,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "A.R.M",
+      "imdb": 7.1,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Aadu",
+      "imdb": 7.1,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Aadu 2",
+      "imdb": 7.1,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "The Goat Life",
+      "imdb": 7.1,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Thor",
+      "imdb": 7.0,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "RDX: Robert Dony Xavier",
+      "imdb": 7.0,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Jawan",
+      "imdb": 6.9,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Guruvayoor Ambalanadayil",
+      "imdb": 6.7,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Varshangalkku Shesham",
+      "imdb": 6.6,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Black Panther: Wakanda Forever",
+      "imdb": 6.6,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Krrish",
+      "imdb": 6.5,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Dunki",
+      "imdb": 6.5,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Chennai Express",
+      "imdb": 6.3,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Animal",
+      "imdb": 6.2,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Suicide Squad",
+      "imdb": 5.9,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Brahmastra Part One: Shiva",
+      "imdb": 5.6,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Ee Pattanathil Bhootham",
+      "imdb": 3.8,
+      "mine": 8,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Kantara: A Legend - Chapter 1",
+      "imdb": 8.1,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Jab We Met",
+      "imdb": 7.9,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "RRR",
+      "imdb": 7.8,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Spider-Man: Homecoming",
+      "imdb": 7.4,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Identity",
+      "imdb": 7.0,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Dies Irae",
+      "imdb": 6.9,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Salaar",
+      "imdb": 6.7,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Pulimurugan",
+      "imdb": 6.7,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Thor: Love and Thunder",
+      "imdb": 6.1,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Aadu 3",
+      "imdb": 6.1,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Krrish 3",
+      "imdb": 5.4,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Ra.One",
+      "imdb": 5.0,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Big Brother",
+      "imdb": 3.6,
+      "mine": 7,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Kaathal - The Core",
+      "imdb": 7.4,
+      "mine": 6,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Jailer",
+      "imdb": 7.2,
+      "mine": 6,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Iron Man 3",
+      "imdb": 7.1,
+      "mine": 6,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Ant-Man and the Wasp",
+      "imdb": 7.0,
+      "mine": 6,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Iron Man 2",
+      "imdb": 6.9,
+      "mine": 6,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Coolie",
+      "imdb": 6.0,
+      "mine": 6,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Devara Part 1",
+      "imdb": 6.0,
+      "mine": 6,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Pathaan",
+      "imdb": 5.8,
+      "mine": 6,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "CBI 5: The Brain",
+      "imdb": 5.6,
+      "mine": 6,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Captain America: Brave New World",
+      "imdb": 5.6,
+      "mine": 5,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Shylock",
+      "imdb": 5.1,
+      "mine": 5,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Marakkar: Lion of the Arabian Sea",
+      "imdb": 5.9,
+      "mine": 4,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Boom",
+      "imdb": 2.3,
+      "mine": 4,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Maheshinte Prathikaaram",
+      "imdb": 8.3,
+      "mine": 3,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Bazooka",
+      "imdb": 6.8,
+      "mine": 3,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "L2: Empuraan",
+      "imdb": 6.1,
+      "mine": 3,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Pushpa: The Rule - Part 2",
+      "imdb": 6.0,
+      "mine": 3,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "The Greatest of All Time",
+      "imdb": 5.7,
+      "mine": 2,
+      "image": "",
+      "kind": "movie"
+    },
+    {
+      "title": "Adipurush",
+      "imdb": 2.6,
+      "mine": 1,
+      "image": "",
+      "kind": "movie"
+    }
+  ],
+  "watchedSeries": [
+    {
+      "title": "X-Men '97",
+      "imdb": 8.7,
+      "mine": 9,
+      "image": "",
+      "kind": "series"
+    },
+    {
+      "title": "VisionQuest",
+      "imdb": 7.6,
+      "mine": 9,
+      "image": "",
+      "kind": "series"
+    },
+    {
+      "title": "Daredevil: Born Again",
+      "imdb": 8.1,
+      "mine": 8,
+      "image": "",
+      "kind": "series"
+    },
+    {
+      "title": "WandaVision",
+      "imdb": 7.9,
+      "mine": 8,
+      "image": "",
+      "kind": "series"
+    },
+    {
+      "title": "Your Friendly Neighborhood Spider-Man",
+      "imdb": 7.5,
+      "mine": 8,
+      "image": "",
+      "kind": "series"
+    },
+    {
+      "title": "Hawkeye",
+      "imdb": 7.4,
+      "mine": 8,
+      "image": "",
+      "kind": "series"
+    },
+    {
+      "title": "Wonder Man",
+      "imdb": 7.4,
+      "mine": 8,
+      "image": "",
+      "kind": "series"
+    },
+    {
+      "title": "Moon Knight",
+      "imdb": 7.3,
+      "mine": 8,
+      "image": "",
+      "kind": "series"
+    },
+    {
+      "title": "What If...?",
+      "imdb": 7.3,
+      "mine": 8,
+      "image": "",
+      "kind": "series"
+    },
+    {
+      "title": "The Falcon and the Winter Soldier",
+      "imdb": 7.1,
+      "mine": 8,
+      "image": "",
+      "kind": "series"
+    },
+    {
+      "title": "Marvel Zombies",
+      "imdb": 7.0,
+      "mine": 8,
+      "image": "",
+      "kind": "series"
+    }
+  ]
+};
+
+// Optional title fixes for Wikipedia search. Add entries here only if a poster resolves incorrectly.
+const wikiOverrides = {
+  "Godfather — Malayalam": "Godfather 1991 Malayalam film",
+  "Drishyam — Malayalam": "Drishyam 2013 film",
+  "Loki": "Loki TV series",
+  "Friends": "Friends TV series",
+  "2018": "2018 Indian film",
+  "Charlie": "Charlie 2015 Malayalam film",
+  "Lucifer": "Lucifer 2019 Indian film",
+  "Jailer": "Jailer 2023 Tamil film",
+  "Identity": "Identity Indian film",
+  "Coolie": "Coolie Indian film",
+  "Boom": "Boom Indian film",
+  "The Odyssey": "The Odyssey film",
+  "Wonder Man": "Wonder Man TV series"
+};
+
+const posterCache = new Map();
+
+function initials(title) {
+  return title
+    .replace(/[^A-Za-z0-9 ]/g, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 3)
+    .map(x => x[0])
+    .join("")
+    .toUpperCase();
+}
+
+function ratingClass(value) {
+  if (value === 10) return "mine-10";
+  if (value >= 8) return "mine-high";
+  if (value >= 6) return "mine-mid";
+  return "mine-low";
+}
+
+async function fetchPoster(record, size = 720) {
+  if (record.image) return record.image;
+  const key = record.title + "|" + record.kind + "|" + size;
+  if (posterCache.has(key)) return posterCache.get(key);
+
+  const override = wikiOverrides[record.title];
+  const suffix = record.kind === "series" ? " television series" : " film";
+  const query = override || (record.title + suffix);
+  const url = "https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=" +
+    encodeURIComponent(query) +
+    "&gsrlimit=1&prop=pageimages&piprop=thumbnail&pithumbsize=" + size + "&format=json&origin=*";
+
+  try {
+    const res = await fetch(url);
+    const json = await res.json();
+    const pages = json?.query?.pages ? Object.values(json.query.pages) : [];
+    const src = pages[0]?.thumbnail?.source || "";
+    posterCache.set(key, src);
+    return src;
+  } catch (e) {
+    posterCache.set(key, "");
+    return "";
+  }
+}
+
+function posterMarkup(record) {
+  return `<button type="button" class="poster-open" data-title="${escapeHtml(record.title)}" data-kind="${record.kind}" aria-label="Enlarge poster of ${escapeHtml(record.title)}">
+    <div class="poster-fallback" data-title="${escapeHtml(record.title)}" data-kind="${record.kind}">${initials(record.title)}</div>
+  </button>`;
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function renderSection(key, query = "") {
+  const section = document.getElementById(key);
+  const body = section.querySelector("tbody");
+  const rows = database[key].filter(item => item.title.toLowerCase().includes(query.toLowerCase()));
+
+  document.getElementById("count-" + key).textContent =
+    rows.length === database[key].length ? `${rows.length} titles` : `${rows.length} of ${database[key].length} titles`;
+
+  if (!rows.length) {
+    body.innerHTML = `<tr><td class="empty" colspan="5">No titles match your search.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = rows.map((item, index) => `
+    <tr>
+      <td class="rank">${String(index + 1).padStart(2, "0")}</td>
+      <td class="poster-cell">${posterMarkup(item)}</td>
+      <td>
+        <div class="title">${escapeHtml(item.title)}</div>
+        <div class="sub">${item.kind === "series" ? "Series" : "Movie"}</div>
+      </td>
+      <td class="rating"><span class="badge imdb">★ ${Number(item.imdb).toFixed(1)}</span></td>
+      <td class="rating"><span class="badge ${ratingClass(item.mine)}">★ ${item.mine}/10</span></td>
+    </tr>
+  `).join("");
+
+  hydratePosters(section);
+}
+
+// Load only posters near the viewport: keeps the giant gallery responsive.
+const posterObserver = "IntersectionObserver" in window
+  ? new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (!entry.isIntersecting) return;
+        posterObserver.unobserve(entry.target);
+        loadPoster(entry.target);
+      });
+    }, { rootMargin: "480px 0px" })
+  : null;
+
+async function loadPoster(el) {
+  const title = el.dataset.title;
+  const kind = el.dataset.kind;
+  const record = Object.values(database).flat().find(r => r.title === title && r.kind === kind);
+  if (!record) return;
+  const src = await fetchPoster(record);
+  if (!src || !el.isConnected) return;
+  const img = document.createElement("img");
+  img.className = "poster";
+  img.alt = title + " poster";
+  img.loading = "lazy";
+  img.src = src;
+  img.onerror = () => { if (img.isConnected) img.replaceWith(el); };
+  el.replaceWith(img);
+}
+
+function hydratePosters(section) {
+  section.querySelectorAll(".poster-fallback").forEach(el => {
+    if (posterObserver) posterObserver.observe(el);
+    else loadPoster(el);
+  });
+}
+
+function renderAll(query = "") {
+  Object.keys(database).forEach(key => renderSection(key, query));
+}
+
+function updateStats() {
+  const all = Object.values(database).flat();
+  document.getElementById("statTotal").textContent = all.length;
+  document.getElementById("statHof").textContent = database.hofMovies.length + database.hofSeries.length;
+  document.getElementById("statMovies").textContent = database.hofMovies.length + database.watchedMovies.length;
+  document.getElementById("statSeries").textContent = database.hofSeries.length + database.watchedSeries.length;
+}
+
+document.querySelectorAll(".tab").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".section").forEach(s => s.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById(btn.dataset.target).classList.add("active");
+  });
+});
+
+document.getElementById("search").addEventListener("input", e => renderAll(e.target.value));
+
+
+
+// Gallery / list display, with an extra-large option.
+const galleryMode = document.getElementById("galleryMode");
+const listMode = document.getElementById("listMode");
+const sizeMode = document.getElementById("sizeMode");
+function syncViewButtons() {
+  const isGallery = document.body.classList.contains("view-gallery");
+  const xl = document.body.classList.contains("super-size");
+  galleryMode.classList.toggle("active", isGallery);
+  galleryMode.setAttribute("aria-pressed", String(isGallery));
+  listMode.classList.toggle("active", !isGallery);
+  listMode.setAttribute("aria-pressed", String(!isGallery));
+  sizeMode.classList.toggle("active", xl);
+  sizeMode.setAttribute("aria-pressed", String(xl));
+  sizeMode.textContent = xl ? "⛶ Super-size ON" : "⛶ Super-size OFF";
+  sizeMode.hidden = !isGallery;
+}
+galleryMode.addEventListener("click", () => {
+  document.body.classList.add("view-gallery"); syncViewButtons();
+});
+listMode.addEventListener("click", () => {
+  document.body.classList.remove("view-gallery"); syncViewButtons();
+});
+sizeMode.addEventListener("click", () => {
+  document.body.classList.toggle("super-size"); syncViewButtons();
+});
+syncViewButtons();
+
+// Poster lightbox. Uses a higher-resolution image on demand, if one is available.
+const posterModal = document.getElementById("posterModal");
+const posterModalImage = document.getElementById("posterModalImage");
+const posterModalFallback = document.getElementById("posterModalFallback");
+let activePosterKey = "";
+function showPosterImage(src, title) {
+  if (!src) return;
+  posterModalImage.src = src;
+  posterModalImage.alt = title + " enlarged poster";
+  posterModalImage.hidden = false;
+  posterModalFallback.classList.remove("visible");
+}
+document.querySelector("main").addEventListener("click", async event => {
+  const btn = event.target.closest(".poster-open");
+  if (!btn) return;
+  const record = Object.values(database).flat().find(
+    r => r.title === btn.dataset.title && r.kind === btn.dataset.kind
+  );
+  if (!record) return;
+  const key = record.title + "|" + record.kind;
+  activePosterKey = key;
+  document.getElementById("posterModalTitle").textContent = record.title;
+  document.getElementById("posterModalRating").textContent =
+    `Your rating: ${record.mine}/10  •  IMDb: ${Number(record.imdb).toFixed(1)}/10`;
+  posterModalImage.hidden = true;
+  posterModalImage.removeAttribute("src");
+  posterModalFallback.textContent = "Looking up the poster…";
+  posterModalFallback.classList.add("visible");
+  posterModal.showModal();
+  const thumb = btn.querySelector("img.poster");
+  if (thumb && thumb.complete && thumb.naturalWidth) showPosterImage(thumb.src, record.title);
+  const hiResSrc = await fetchPoster(record, 1200);
+  if (!posterModal.open || activePosterKey !== key) return;
+  if (hiResSrc) showPosterImage(hiResSrc, record.title);
+  else if (posterModalImage.hidden) posterModalFallback.textContent = "Poster unavailable for this title";
+});
+posterModalImage.addEventListener("error", () => {
+  posterModalImage.hidden = true;
+  posterModalFallback.textContent = "Poster unavailable for this title";
+  posterModalFallback.classList.add("visible");
+});
+document.getElementById("posterModalClose").addEventListener("click", () => posterModal.close());
+posterModal.addEventListener("click", event => { if (event.target === posterModal) posterModal.close(); });
+posterModal.addEventListener("close", () => { activePosterKey = ""; });
+
+updateStats();
+renderAll();
+</script>
+</body>
+</html>
